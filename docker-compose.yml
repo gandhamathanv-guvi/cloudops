@@ -1,0 +1,19 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+  mongodb:
+    image: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - cloud-mongo:/data/db
+volumes:
+      cloud-mongo:
