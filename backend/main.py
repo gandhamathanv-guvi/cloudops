@@ -10,6 +10,7 @@ import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import time
+import paramiko
 
 from models import *
 from database import *
@@ -17,6 +18,7 @@ from schemas import *
 from auth import verify_token, create_access_token
 from utility import get_password_hash, verify_password
 from connections import  *
+from tasks import delete_stack_task
 
 load_dotenv()
 
@@ -148,8 +150,26 @@ async def get_lab(lab_id: str, current_user: dict = Depends(get_current_user)):
     stackDetails = await stacks_collection.find_one({"stack_id": test["stackId"] })
     return {"test_id": test['testId'], "estimatedTime": test["estimatedTime"] , "link": stackDetails['config']["ShellInABoxURL"]}
 
-
-
+@app.get("/labs/{testId}/verify/{verifyId}")
+async def get_verify_status(testId: str, verifyId: str, current_user: dict = Depends(get_current_user)):
+    verify_step = await verify_lab_step.find_one({"verifyId": verifyId})
+    if not verify_step:
+        raise HTTPException(status_code=404, detail="Invalid Verify ID")
+    print(verify_step)
+    test = await tests_collection.find_one({"testId": testId, "user_id": current_user["user_id"],"status": "RUNNING"},{"_id": 0})
+    if not test:
+        raise HTTPException(status_code=204, detail="Test not found")
+    stackDetails = await stacks_collection.find_one({"stack_id": test["stackId"] })
+    INSTANCE_IP = stackDetails['config']['InstancePublicIP']
+    INSTANCE_NAME = "ubuntu"
+    COMMAND = verify_step['command']
+    # **Test Case 1: Check if Nginx is installed**
+    print(f"Checking if {COMMAND} is installed on {INSTANCE_IP}...")
+    output, error = execute_ssh_command(INSTANCE_IP, INSTANCE_NAME, "./gandhamathanv-nivas.pem", COMMAND)
+    if output == verify_step['output']:
+        return {"status": "success"}
+    else:
+        return {"status": "failed"}
 
 # Function to generate stack ID
 def generate_stack_id():
@@ -163,12 +183,10 @@ async def start_lab(request: TestStartRequest,current_user: dict = Depends(get_c
     lab = await labs_collection.find_one({"labId": lab_id})
     if not lab:
         raise HTTPException(status_code=404, detail="Lab not found")
-    print("here10-------------->")
-    stack_id = await create_stack(lab_id+str(uuid.uuid4()), lab['templateUrl'])
-    print("here20-------------->")
+    stack_name = f"{lab['title'].lower().replace(' ', '-')}-{generate_stack_id()}"
+    stack_id = await create_stack(stack_name, lab['templateUrl'])
     test_id = str(uuid.uuid4())
     estimatedTime = datetime.utcnow() + timedelta(minutes=lab['duration'])
-    print("here30-------------->")
     lab_data = {
         "testId": test_id,
         "labId": lab_id,
@@ -179,14 +197,13 @@ async def start_lab(request: TestStartRequest,current_user: dict = Depends(get_c
         "endedAt": None,
         "status": "RUNNING"
     }
-    print("here40-------------->")
     tests_collection.insert_one(lab_data)
-    print("here50-------------->")
+    stack = await stacks_collection.find_one({"stack_id": stack_id})
+    scheduler.enqueue_in(timedelta(hours=1), delete_stack_task, stack_name, test_id)
     stacks_collection.update_one(
         {"stack_id": stack_id},
         {"$set": {"expire_time": estimatedTime}}
     )
-    print("here60-------------->")
     stack =   await stacks_collection.find_one({"stack_id": stack_id})
     return {"test_id": test_id, "estimatedTime": estimatedTime , "link": stack['config']["ShellInABoxURL"]}
 
@@ -203,7 +220,7 @@ async def end_lab(request: TestEndRequest):
         raise HTTPException(status_code=400, detail="Lab has already ended.")
     stackDetails = await stacks_collection.find_one({"stack_id": test["stackId"] })
     stack_name = stackDetails['stack_name']
-    await delete_stack(stack_name)
+    q.enqueue(delete_stack_task, stack_name)
     updated_data = {
         "$set": {
             "endedAt": datetime.utcnow(),
@@ -211,6 +228,7 @@ async def end_lab(request: TestEndRequest):
         }
     }
     tests_collection.update_one({"testId": testId}, updated_data)
+    stackDetails = await stacks_collection.update_one({"stack_id": test["stackId"] },{"$set": {"status": "DELETED_INITIATED"}})
     return {"message": "Lab ended successfully."}
 
 
@@ -297,3 +315,45 @@ async def delete_stack(stack_name: str):
             {"$set": {"status": "ERROR", "error_message": str(e)}}
         )
         raise HTTPException(status_code=500, detail=f"❌ Error: {str(e)}")
+
+
+# SSH Command Executor
+def execute_ssh_command(EC2_IP, EC2_USER,EC2_PEM, command):
+    try:
+        # Initialize SSH client
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # Bypass host key checking
+
+
+        # Convert string into a file-like object
+        # key_file = io.StringIO(EC2_PEM_CONTENT)
+
+        # # Load the private key
+        # key = paramiko.RSAKey.from_private_key(key_file)
+
+         # Read the private key file
+        key = paramiko.RSAKey(filename=EC2_PEM)
+
+        # Connect to EC2 instance
+        ssh.connect(EC2_IP, username=EC2_USER, pkey=key)
+
+        # Execute command
+        stdin, stdout, stderr = ssh.exec_command(command)
+        output = stdout.read().decode().strip()
+        error = stderr.read().decode().strip()
+        print(f"Output: {output}")
+        print(f"Error: {error}")
+
+        # Close SSH connection
+        ssh.close()
+
+        return output, error
+    except Exception as e:
+        print(f"Error: {e}")
+        return None, str(e)
+
+
+@app.get("/test")
+def test():
+    q.enqueue(delete_stack_task, "hosting-with-nginx879cc0c7-a74e-4254-87fa-e94a706ec5e5")
+    return {"message": "Test successful"}

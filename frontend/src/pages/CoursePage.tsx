@@ -15,7 +15,7 @@ export const  CoursePage = () =>  {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [testDetails, setTestDetails] = useState({});
   const [expandedSteps, setExpandedSteps] = useState<number[]>([1]);
-  const [verificationStatus, setVerificationStatus] = useState<Record<number, 'pending' | 'success' | 'failed'>>({});
+  const [verificationStatus, setVerificationStatus] = useState<Record<number, 'pending' | 'success' | 'failed' | 'loading'>>({});
   const {user} = useAuth()
   useEffect(() => {
     let interval: number;
@@ -89,10 +89,12 @@ export const  CoursePage = () =>  {
 
 
   const toggleTestStatus = async () => {
+    setisTestStarted(undefined)
     if (isTestStarted) {
       if (testId) {
         try {
           console.log(testDetails)
+          setisTestStarted(undefined)
           await testApi.endLab(testDetails.test_id);
           localStorage.removeItem('testId');
           setisTestStarted(false);
@@ -105,8 +107,9 @@ export const  CoursePage = () =>  {
     } else {
       try {
         const response = await testApi.startLab(labId || "");
-        localStorage.setItem('testId', response.testId);
+        localStorage.setItem('testId', response.test_id);
         setTestDetails(response)
+        window.open(response.link, "_blank");
         setisTestStarted(true);
       } catch (error) {
         console.error('Error starting lab:', error);
@@ -126,13 +129,26 @@ export const  CoursePage = () =>  {
     );
   };
 
-  const verifyStep = (stepId: number) => {
-    // Simulate verification process
-    setVerificationStatus(prev => ({
-      ...prev,
-      [stepId]: Math.random() > 0.5 ? 'success' : 'failed'
-    }));
+  const verifyStep = async (stepId: number, verifyId:string) => {
+    try {
+      setVerificationStatus(prev => ({
+        ...prev,
+        [stepId]: 'loading'
+      }));
+      const response = await labApi.verifyStep(testId, verifyId);
+      setVerificationStatus(prev => ({
+        ...prev,
+        [stepId]: response.status
+      }));
+    } catch (error) {
+      console.error('Error verifying step:', error);
+      setVerificationStatus(prev => ({
+        ...prev,
+        [stepId]: 'failed'
+      }));
+    }
   };
+
 
   const getVerificationStatusColor = (status: string | undefined) => {
     switch (status) {
@@ -259,10 +275,10 @@ export const  CoursePage = () =>  {
                           </div>
                         </div>
                       ))}
-                      
-                      <div className="pt-4 flex justify-end">
+
+                      {step.verifyId!==false && <div className="pt-4 flex justify-end">
                         <button
-                          onClick={() => verifyStep(step.id)}
+                          onClick={() => verifyStep(step.id, step.verifyId)}
                           className={`px-6 py-2 rounded-lg font-semibold flex items-center space-x-2 ${
                             verificationStatus[step.id] === 'success'
                               ? 'bg-green-500/20 text-green-500'
@@ -274,9 +290,10 @@ export const  CoursePage = () =>  {
                           <span>Verify Step</span>
                           {verificationStatus[step.id] === 'success' && <CheckCircle2 className="w-4 h-4" />}
                           {verificationStatus[step.id] === 'failed' && <AlertCircle className="w-4 h-4" />}
+                          {verificationStatus[step.id] === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
                           {!verificationStatus[step.id] && <ArrowRight className="w-4 h-4" />}
                         </button>
-                      </div>
+                      </div>}
                     </div>
                   </div>
                 )}
@@ -294,17 +311,17 @@ export const  CoursePage = () =>  {
                   <div
                     className="bg-purple-500 h-2 rounded-full transition-all duration-300"
                     style={{
-                      width: `${(Object.values(verificationStatus).filter(status => status === 'success').length / labData?.steps.length) * 100}%`,
+                      width: `${(Object.values(verificationStatus).filter(status => status === 'success').length / labData?.steps.filter(el=>el.verifyId!==false).length) * 100}%`,
                     }}
                   />
                 </div>
                 <div className="text-center text-gray-400">
-                  {Object.values(verificationStatus).filter(status => status === 'success').length} of {labData?.steps.length} sections completed
+                  {Object.values(verificationStatus).filter(status => status === 'success').length} of {labData?.steps.filter(el=>el.verifyId!==false).length} sections completed
                 </div>
                 
                 {/* Step Status Overview */}
                 <div className="mt-6 space-y-3">
-                  {labData?.steps.map(step => (
+                  {labData?.steps.filter(el=>el.verifyId!==false).map(step => (
                     <div key={step.id} className="flex items-center justify-between text-sm">
                       <span className="text-gray-400">Section {step.id}</span>
                       <span className={getVerificationStatusColor(verificationStatus[step.id])}>

@@ -1,24 +1,12 @@
-from database import * 
-from datetime import datetime
-from main import delete_stack
-import asyncio
+import os
+import redis
+from rq import Worker, Queue
 
-async def delete_expired_stacks():
-    expired_stacks_query =  stacks_collection.find({
-        "expire_time": {"$lte": datetime.utcnow()},
-        "status": {"$ne": "DELETED"}
-    })
-    expired_stacks = await expired_stacks_query.to_list(length=None)
-    if len(expired_stacks)==0:
-        print("🗑️ No Stacks To Delete")
+redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
+conn = redis.from_url(redis_url)
+listen = ['default']
 
-    for stack in expired_stacks:
-        stack_name = stack["stack_name"]
-        try:
-            await delete_stack(stack_name)
-        except Exception as e:
-            print(f"❌ Error deleting stack '{stack_name}': {e}")
-
-if __name__ == "__main__":
-    # Run the async function
-    asyncio.run(delete_expired_stacks())
+if __name__ == '__main__':
+    queues = [Queue(name, connection=conn) for name in listen]
+    worker = Worker(queues, connection=conn)
+    worker.work()

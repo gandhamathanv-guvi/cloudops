@@ -71,6 +71,7 @@ class Step(BaseModel):
     title: str
     description: str
     commands: List[Command]
+    verifyId: str | bool
 
 class Lab(BaseModel):
     labId: str

@@ -7,6 +7,7 @@ import { CourseOverview } from './pages/CourseOverview';
 import { CoursePage } from './pages/CoursePage';
 import { LabPage } from './pages/LabPage';
 import { useAuth } from './hooks/useAuth';
+import Shell from './pages/shell';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -34,6 +35,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/shell" element={<Shell />} />
         <Route path="/login" element={<LoginPage />} />
         <Route
           path="/dashboard"

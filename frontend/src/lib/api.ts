@@ -73,6 +73,10 @@ export const labApi = {
     const response = await api.get(`/labs/checkstatus/${id}`);
     return response.data;
   },
+  verifyStep: async (testId: string ,verifyId: string) => {
+    const response = await api.get(`/labs/${testId}/verify/${verifyId}`);
+    return response.data;
+  },
 };
 
 export const testApi = {
