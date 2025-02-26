@@ -17,17 +17,12 @@ export const LandingPage = () => {
           <span className="text-xl font-bold">DevOpsLearn</span>
         </div>
         <div className="flex items-center gap-6">
-          <a href="#features" className="hover:text-[#8B5CF6] transition-colors">Features</a>
-          <a href="#pricing" className="hover:text-[#8B5CF6] transition-colors">Pricing</a>
-          <a href="#courses" className="hover:text-[#8B5CF6] transition-colors">Courses</a>
-          <a href="#faq" className="hover:text-[#8B5CF6] transition-colors">FAQ</a>
-          <a href="#signin" className="hover:text-[#8B5CF6] transition-colors">Sign In</a>
-          <a 
-            href="#get-started" 
+          <Link
+            to="/login" 
             className="bg-[#8B5CF6] text-white px-4 py-2 rounded-lg hover:bg-[#7C3AED] transition-colors flex items-center gap-2"
           >
             Get Started <ChevronRight className="w-4 h-4" />
-          </a>
+          </Link>
         </div>
       </nav>
 
@@ -52,9 +47,9 @@ export const LandingPage = () => {
               Start Now
               <ChevronRight className="w-5 h-5" />
             </Link>
-            <button className="border border-[#8B5CF6] text-[#8B5CF6] px-8 py-4 rounded-lg hover:bg-[#8B5CF6] hover:text-white transition-colors text-lg font-medium">
+            {/* <button className="border border-[#8B5CF6] text-[#8B5CF6] px-8 py-4 rounded-lg hover:bg-[#8B5CF6] hover:text-white transition-colors text-lg font-medium">
               Watch Demo
-            </button>
+            </button> */}
           </div>
         </div>
       </div>

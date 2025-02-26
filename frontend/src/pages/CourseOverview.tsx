@@ -1,4 +1,4 @@
-import { Terminal, Cloud, Database, Star, Clock, BookOpen, Award, Server, Settings, Lock, Globe, ChevronDown, ChevronUp } from 'lucide-react';
+import { Terminal, Cloud, Database, Star, Clock, BookOpen, Award, Server, Lock, Globe, ChevronDown, ChevronUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';

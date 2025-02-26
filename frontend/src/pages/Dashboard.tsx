@@ -12,7 +12,7 @@ export const Dashboard = () => {
     const fetchData = async () => {
       try {
         console.log("user AUTH", user)
-        const response = await fetch('http://localhost:8000/dashboard');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/dashboard`);
         const data = await response.json();
         setCourses(data.courses);
         setAchievements(data.achievements);
@@ -37,10 +37,10 @@ export const Dashboard = () => {
             <span className="text-xl font-bold">DevOpsLearn</span>
           </div>
           <div className="flex items-center space-x-6">
-            <button className="flex items-center space-x-2 hover:text-purple-400 transition-colors">
+            {/* <button className="flex items-center space-x-2 hover:text-purple-400 transition-colors">
               <Settings className="w-5 h-5" />
               <span>Settings</span>
-            </button>
+            </button> */}
             <button className="flex items-center space-x-2 hover:text-purple-400 transition-colors">
               <LogOut className="w-5 h-5" />
               <span>Logout</span>
