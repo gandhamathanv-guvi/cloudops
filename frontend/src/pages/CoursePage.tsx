@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Terminal, CheckCircle2, XCircle, Clock, Activity, ArrowRight, Copy, ChevronDown, ChevronUp, AlertCircle, Loader2 } from 'lucide-react';
-import axios from 'axios';
+import { Terminal, CheckCircle2, XCircle, Clock, ArrowRight, Copy, ChevronDown, ChevronUp, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { labApi, testApi } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -108,6 +107,7 @@ export const  CoursePage = () =>  {
       try {
         const response = await testApi.startLab(labId || "");
         localStorage.setItem('testId', response.test_id);
+        setTestid(response.test_id)
         setTestDetails(response)
         window.open(response.link, "_blank");
         setisTestStarted(true);
@@ -172,12 +172,11 @@ export const  CoursePage = () =>  {
               <h1 className="text-xl font-bold">{labData?.title}</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <div className={`flex items-center space-x-2 ${
-                connectionStatus === 'connected' ? 'text-green-500' : 'text-red-500'
-              }`}>
-                <Activity className="w-4 h-4" />
-                <span className="text-sm capitalize">{connectionStatus}</span>
-              </div>
+              {testDetails?.link && <a href={testDetails?.link} target='_blank' className={`flex items-center space-x-2 text-green-500`}>  
+                
+                <span className="text-sm capitalize">Terminal </span>
+                <ExternalLink className='w-4 h-4'/> 
+              </a>}
               {isTestStarted ===undefined ? (
         <div className="flex items-center justify-center w-full h-16">
           <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
@@ -202,6 +201,7 @@ export const  CoursePage = () =>  {
           </div>
         </div>
       </div>
+
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -250,7 +250,6 @@ export const  CoursePage = () =>  {
                     </button>
                   </div>
                 </div>
-
                 {expandedSteps.includes(step.id) && (
                   <div className="border-t border-gray-700">
                     <div className="p-6 space-y-4">
@@ -301,10 +300,13 @@ export const  CoursePage = () =>  {
             ))}
           </div>
 
+
           {/* Progress and Reference */}
           <div className="space-y-6">
             {/* Progress Card */}
             <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl border border-gray-700 p-6 sticky top-28">
+            <div className="flex justify-center mb-6">
+          </div>
               <h3 className="text-lg font-semibold mb-4">Lab Progress</h3>
               <div className="space-y-4">
                 <div className="w-full bg-gray-700 rounded-full h-2">

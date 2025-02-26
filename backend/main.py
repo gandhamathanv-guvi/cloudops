@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import time
 import paramiko
+import io
 
 from models import *
 from database import *
@@ -326,13 +327,15 @@ def execute_ssh_command(EC2_IP, EC2_USER,EC2_PEM, command):
 
 
         # Convert string into a file-like object
-        # key_file = io.StringIO(EC2_PEM_CONTENT)
+        with open("./gandhamathanv-nivas.pem", "r") as file:
+            EC2_PEM_CONTENT = file.read()
+        key_file = io.StringIO(EC2_PEM_CONTENT)
 
         # # Load the private key
-        # key = paramiko.RSAKey.from_private_key(key_file)
+        key = paramiko.RSAKey.from_private_key(key_file)
 
          # Read the private key file
-        key = paramiko.RSAKey(filename=EC2_PEM)
+        # key = paramiko.RSAKey(filename=EC2_PEM)
 
         # Connect to EC2 instance
         ssh.connect(EC2_IP, username=EC2_USER, pkey=key)
